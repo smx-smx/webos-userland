@@ -5,6 +5,7 @@
 "NDL_DirectAudioOpen" = "dummy";
 "NDL_DirectAudioPause" = "dummy";
 "NDL_DirectAudioPlay" = "dummy";
+"NDL_DirectAudioRegisterCallback" = "dummy";
 "NDL_DirectAudioResume" = "dummy";
 "NDL_DirectAudioSupportMultiChannel" = "dummy";
 "NDL_DirectEffectGetAvailableBufferSize" = "dummy";
@@ -16,6 +17,7 @@
 "NDL_DirectMediaLoad" = "dummy";
 "NDL_DirectMediaQuit" = "dummy";
 "NDL_DirectMediaSetAppState" = "dummy";
+"NDL_DirectMediaSetWindowId" = "dummy";
 "NDL_DirectMediaUnload" = "dummy";
 "NDL_DirectMedia_DL_Finalize" = "dummy";
 "NDL_DirectMedia_DL_Initialize" = "dummy";

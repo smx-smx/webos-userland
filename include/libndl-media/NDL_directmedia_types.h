@@ -101,6 +101,13 @@ _REPLACE_TYPE_ERROR(NDL_DIRECTVIDEO_DATA_INFO, NDL_DIRECTVIDEO_DATA_INFO_T);
 
 typedef void (*NDLMediaLoadCallback)(int, long long, const char *);
 
+/* isSupported: 0 = no device supporting multi channel PCM,
+ *              1 = device supports it but Digital Sound Out is not pass through,
+ *              2 = current settings support multi channel PCM.
+ * note these are the callback codes, they are off by one against
+ * NDL_DirectAudioSupportMultiChannel(). */
+typedef void (*NDLMultiChannelPCMCallback)(int isSupported, const char *strValue);
+
 #define NDL_DIRECTMEDIA_AUDIO_PCM_FORMAT_S16LE "S16LE"
 #define NDL_DIRECTMEDIA_AUDIO_PCM_MODE_MONO "mono"
 #define NDL_DIRECTMEDIA_AUDIO_PCM_MODE_STEREO "stereo"
@@ -127,17 +134,18 @@ typedef enum NDL_AUDIO_TYPE_ {
 
 _REPLACE_ENUM(NDL_AUDIO_TYPE, NDL_AUDIO_TYPE_);
 
+/* the rates are not sorted by frequency, 22.05 kHz is 8 and not 5 */
 typedef enum NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_ {
-    /* I'm pretty sure the app will crash on this value */
+    /* means "bypass". I'm pretty sure the app will crash on this value */
     NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_NONE = 0,
     NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_48KHZ = 1,
     NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_44KHZ = 2,
     NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_32KHZ = 3,
     NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_24KHZ = 4,
-    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_22KHZ = 5,
-    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_16KHZ = 6,
-    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_12KHZ = 7,
-    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_8KHZ = 8,
+    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_16KHZ = 5,
+    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_12KHZ = 6,
+    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_8KHZ = 7,
+    NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_22KHZ = 8,
 } NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE;
 
 _REPLACE_ENUM(NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE, NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_);
@@ -152,14 +160,14 @@ static inline __attribute__((__const__)) NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE N
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_32KHZ;
         case 24000:
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_24KHZ;
-        case 22050:
-            return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_22KHZ;
         case 16000:
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_16KHZ;
         case 12000:
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_12KHZ;
         case 8000:
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_8KHZ;
+        case 22050:
+            return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_22KHZ;
         default:
             return NDL_DIRECTMEDIA_AUDIO_PCM_SAMPLE_RATE_NONE;
     }
@@ -209,24 +217,26 @@ typedef struct NDL_DIRECTMEDIA_DATA_INFO {
 _REPLACE_STRUCT(NDL_DIRECTMEDIA_DATA_INFO_T, NDL_DIRECTMEDIA_DATA_INFO);
 _REPLACE_TYPE(NDL_DIRECTMEDIA_DATA_INFO, NDL_DIRECTMEDIA_DATA_INFO_T);
 
-/* name confirmed: struct NDL_DIRECTVIDEO_HDR_INFO */
+/* name confirmed: struct NDL_DIRECTVIDEO_HDR_INFO
+ * 15 words, passed to NDL_DirectVideoSetHDRInfo by value.
+ * primaries are in SMPTE ST 2086 order: 0 = green, 1 = blue, 2 = red. */
 typedef struct NDL_DIRECTVIDEO_HDR_INFO {
-    int displayPrimariesX0;
-    int displayPrimariesY0;
-    int displayPrimariesX1;
-    int displayPrimariesY1;
-    int displayPrimariesX2;
-    int displayPrimariesY2;
-    int whitePointX;
-    int whitePointY;
-    int maxDisplayMasteringLuminance;
-    int minDisplayMasteringLuminance;
-    int maxContentLightLevel;
-    int maxPicAverageLightLevel;
-    int transferCharacteristics;
-    int colorPrimaries;
-    int matrixCoeffs;
-    unsigned char reserved[32];
+    unsigned int displayPrimariesX0;
+    unsigned int displayPrimariesY0;
+    unsigned int displayPrimariesX1;
+    unsigned int displayPrimariesY1;
+    unsigned int displayPrimariesX2;
+    unsigned int displayPrimariesY2;
+    unsigned int whitePointX;
+    unsigned int whitePointY;
+    unsigned int maxDisplayMasteringLuminance;
+    unsigned int minDisplayMasteringLuminance;
+    unsigned int maxContentLightLevel;
+    unsigned int maxPicAverageLightLevel;
+    /* H.265 VUI codes. HDR10 uses 16 (SMPTE ST 2084), 9 (BT.2020), 9 (BT.2020 non-constant). */
+    unsigned int transferCharacteristics;
+    unsigned int colorPrimaries;
+    unsigned int matrixCoeffs;
 } NDL_DIRECTVIDEO_HDR_INFO_T;
 
 _REPLACE_STRUCT(NDL_DIRECTVIDEO_HDR_INFO_T, NDL_DIRECTVIDEO_HDR_INFO);

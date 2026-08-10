@@ -18,12 +18,8 @@ extern "C" {
  */
 const char *NDL_DirectMediaGetError(void);
 
-/**
- * Initialize NDL library
- * @param appId Application ID
- * @return 0 on success, -1 on failure
- */
-int NDL_DirectMediaInit(const char *app_id, ResourceReleased cb);
+/* NDL_DirectMediaInit is declared per API version. API 1 takes a release
+ * callback, API 2 takes the app id alone. */
 
 /**
  * De-initialize NDL library

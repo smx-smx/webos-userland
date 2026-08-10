@@ -38,9 +38,40 @@ int NDL_DirectAudioGetTotalBufferSize(int *total);
 int NDL_DirectAudioPlay(void *buffer, unsigned int size, long long pts);
 
 /**
+ * Initialize NDL library
+ *
+ * @param app_id Application ID
  * @return 0 on success, -1 on failure
  */
-int NDL_DirectAudioSupportMultiChannel(int *isSuppored);
+int NDL_DirectMediaInit(const char *app_id);
+
+/**
+ * Set an external window id for the video output
+ *
+ * @return 0 on success, -1 on failure
+ */
+int NDL_DirectMediaSetWindowId(const char *windowid);
+
+/**
+ * Check if multi channel audio output works
+ *
+ * @param isSupported 0 = multi channel is not supported,
+ *                    1 = supported, but no connected device supports multi channel PCM,
+ *                    2 = the connected device supports multi channel PCM,
+ *                        but Digital Sound Out is not pass through,
+ *                    3 = current settings support multi channel PCM.
+ *                    Only 3 means multi channel PCM will play.
+ * @return 0 on success, -1 on failure
+ */
+int NDL_DirectAudioSupportMultiChannel(int *isSupported);
+
+/**
+ * Register a callback that reports multi channel PCM support changes
+ *
+ * @param cb Sound settings callback
+ * @return 0 on success, -1 on failure
+ */
+int NDL_DirectAudioRegisterCallback(NDLMultiChannelPCMCallback cb);
 
 /**
  * @return 0 on success, -1 on failure
@@ -106,6 +137,9 @@ bool NDL_DirectMedia_DL_IsInitialized(void);
 int NDL_DirectVideoFlushRenderBuffer(void);
 
 /**
+ * Get the number of frames waiting in the render queue
+ *
+ * @param length Frame count, not bytes
  * @return 0 on success, -1 on failure
  */
 int NDL_DirectVideoGetRenderBufferLength(int *length);
@@ -121,11 +155,17 @@ int NDL_DirectVideoGetRenderBufferLength(int *length);
 int NDL_DirectVideoPlay(void *buffer, unsigned int size, long long pts);
 
 /**
+ * Set the render queue length at which the pipeline starts to drop frames
+ *
+ * @param threshold Number of frames in the render queue
  * @return 0 on success, -1 on failure
  */
 int NDL_DirectVideoSetFrameDropThreshold(int threshold);
 
 /**
+ * Set HDR static metadata. Call it after NDL_DirectMediaLoad.
+ *
+ * @param hdrInfo Mastering display metadata plus the H.265 VUI color codes
  * @return 0 on success, -1 on failure
  */
 int NDL_DirectVideoSetHDRInfo(NDL_DIRECTVIDEO_HDR_INFO_T hdrInfo);

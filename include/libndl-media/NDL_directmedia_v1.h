@@ -46,6 +46,15 @@ static inline __attribute__((__const__)) NDL_DIRECTAUDIO_SAMPLING_FREQ NDL_DIREC
 typedef void (*NDLVideoPlayCallback)(unsigned long long);
 
 /**
+ * Initialize NDL library
+ *
+ * @param app_id Application ID
+ * @param cb Called when the media resource is released
+ * @return 0 on success, -1 on failure
+ */
+int NDL_DirectMediaInit(const char *app_id, ResourceReleased cb);
+
+/**
  * @return 0 on success, -1 on failure
  */
 int NDL_DirectAudioOpen(NDL_DIRECTAUDIO_DATA_INFO_T *data);

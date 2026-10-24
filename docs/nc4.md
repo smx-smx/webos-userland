@@ -107,7 +107,7 @@ Apps are started by **appctrl** (`lg.service.special.appctrl`), which looks
 the AUID up in its app lists and asks **procmgr** to execute
 `<binary> <exec_arg> [<ExecuteAppEx param>] --service <name> --auid <hex>`
 with the app framework environment (LD_PRELOAD of liblibm/libgal/libmtal,
-`LD_LIBRARY_PATH`, user `game`, cwd = app directory). appctrl tracks the app
+`LD_LIBRARY_PATH`, cwd = app directory). Downloaded and USB developer apps run as user `game` (uid 500), system apps as `root` with full capabilities. appctrl tracks the app
 as live, so when it calls `LGNC_SYSTEM_Initialize()` its
 `HOA_APP_RequestToFocusedApp` is granted: the TV switches the OSD to the app
 window and keys go to it. When the app exits, focus returns to the previous app.
@@ -170,3 +170,5 @@ harmless without them).
   that ignore focus loss).
 
 Either way the program sees the same command line and environment as a stock app.
+Being a system app, it runs as `root` with all capabilities, so a misbehaving
+program can affect the whole TV.

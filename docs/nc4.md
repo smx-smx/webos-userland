@@ -163,7 +163,9 @@ and the bind mounts disappear on reboot (run `setup` again; the symlink is
 harmless without them).
 
 - **Manual:** pick "NC4 Homebrew" in My Apps, `nc4-launcher` runs the first line
-  of `nc4-homebrew/autostart`.
+  of `nc4-homebrew/autostart`. My Apps starts apps with `HOA_APP_ExecuteAppEx`
+  and the parameter `--runAt MyAppsFull`, which the launcher passes on to the
+  program.
 - **Automated:** `nc4app run <program> [args]` starts the same app with the
   program as `HOA_APP_ExecuteAppEx` parameter and waits for it to exit;
   `nc4app exit 79999` closes it (with SIGTERM/SIGKILL fallbacks for programs

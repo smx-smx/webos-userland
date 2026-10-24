@@ -9,8 +9,9 @@
 # Everything before "--service" selects the program to run, the rest is passed
 # on unchanged so LGNC_SYSTEM_Initialize() registers with the app manager:
 #
-# - started from My Apps: no program is given, the first line of
-#   nc4-homebrew/autostart is used (e.g. "lgnc-gles --seconds 60")
+# - started from My Apps: the parameter is "--runAt MyAppsFull", so the first
+#   line of nc4-homebrew/autostart is used (e.g. "lgnc-gles --seconds 60");
+#   app manager options like --runAt are passed on after the program's arguments
 # - started with "nc4app run <program> [args]": the program comes from the
 #   ExecuteAppEx parameter
 #
@@ -22,6 +23,14 @@ log=$home/nc4-launcher.log
 
 prog=
 args=
+# options from the app manager itself, e.g. "--runAt MyAppsFull" from My Apps
+amargs=
+if [ "${1#-}" != "$1" ]; then
+    while [ $# -gt 0 ] && [ "$1" != "--service" ]; do
+        amargs="$amargs $1"
+        shift
+    done
+fi
 while [ $# -gt 0 ] && [ "$1" != "--service" ]; do
     if [ -z "$prog" ]; then
         prog=$1
@@ -41,6 +50,7 @@ if [ -z "$prog" ] && [ -f "$home/autostart" ]; then
         shift
     done
 fi
+args="$args$amargs"
 
 {
     echo "$(date) pid $$: $prog$args $*"

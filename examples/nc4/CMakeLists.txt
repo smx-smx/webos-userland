@@ -28,12 +28,32 @@ target_link_libraries(lgnc-gles lgncopenapi EGL GLESv2 dl pthread)
 add_executable(lgnc-tone lgnc-tone.c)
 target_link_libraries(lgnc-tone lgncopenapi m dl pthread)
 
+# key code -> name table for lgnc-input, from the target's kernel headers
+find_file(LINUX_INPUT_H linux/input.h)
+if (NOT LINUX_INPUT_H)
+  message(FATAL_ERROR "linux/input.h not found")
+endif()
+find_file(LINUX_INPUT_EVENT_CODES_H linux/input-event-codes.h)
+set(INPUT_HEADERS ${LINUX_INPUT_H})
+if (LINUX_INPUT_EVENT_CODES_H)
+  list(APPEND INPUT_HEADERS ${LINUX_INPUT_EVENT_CODES_H})
+endif()
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/keynames.h
+  COMMAND ${CMAKE_COMMAND} "-DINPUT_HEADERS=${INPUT_HEADERS}" -DOUTPUT=${CMAKE_BINARY_DIR}/keynames.h
+          -P ${CMAKE_SOURCE_DIR}/gen-keynames.cmake
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen-keynames.cmake ${INPUT_HEADERS})
+
+add_executable(lgnc-input lgnc-input.c ${CMAKE_BINARY_DIR}/keynames.h)
+target_include_directories(lgnc-input PRIVATE ${CMAKE_BINARY_DIR})
+target_link_libraries(lgnc-input lgncopenapi EGL GLESv2 dl pthread)
+
 # Everything goes to nc4-homebrew/ at the root of a USB stick. On the TV,
 # "nc4-homebrew/nc4app setup" registers it as the "NC4 Homebrew" system app
 # (nc4-launcher, which starts the program in autostart) and
 # "nc4app run <program> [args]" starts programs through the app manager.
 # run.sh starts them from a shell instead, without app manager integration.
 set(TOOLS_DIR ${CMAKE_SOURCE_DIR}/../../tools/nc4)
-install(TARGETS lgnc-info lgnc-gles lgnc-tone DESTINATION nc4-homebrew)
+install(TARGETS lgnc-info lgnc-gles lgnc-tone lgnc-input DESTINATION nc4-homebrew)
 install(PROGRAMS run.sh ${TOOLS_DIR}/nc4app ${TOOLS_DIR}/nc4-launcher DESTINATION nc4-homebrew)
 install(FILES icon.png autostart DESTINATION nc4-homebrew)

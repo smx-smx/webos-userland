@@ -99,7 +99,9 @@ Notes:
   channels 1-7 take PCM through `LGNC_MEDIA_PlayBuffer()`, fed on
   `LGNC_CB_MSG_NEED_DATA` callbacks (4 KiB chunks).
 
-See `examples/nc4` for working programs.
+See `examples/nc4` for working programs. `sdl-test` (built with
+`-DSDL2_PREFIX=...`) uses SDL2 with the nc4 video driver, which wraps all of the
+above: LGNC registration, the EGL window and remote/pointer input as SDL events.
 
 ## Launching apps
 

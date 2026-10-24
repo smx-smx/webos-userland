@@ -48,6 +48,23 @@ add_executable(lgnc-input lgnc-input.c ${CMAKE_BINARY_DIR}/keynames.h)
 target_include_directories(lgnc-input PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(lgnc-input lgncopenapi EGL GLESv2 dl pthread)
 
+# Optional: SDL2 with the nc4 video driver (https://github.com/libsdl-org/SDL release-2.32.x
+# plus src/video/nc4), installed into SDL2_PREFIX
+set(SDL2_PREFIX "" CACHE PATH "Install prefix of SDL2 built with the nc4 video driver")
+if (SDL2_PREFIX)
+  add_executable(sdl-test sdl-test.c)
+  target_include_directories(sdl-test PRIVATE ${SDL2_PREFIX}/include/SDL2)
+  target_link_directories(sdl-test PRIVATE ${SDL2_PREFIX}/lib)
+  # libSDL2 links liblgncopenapi, which is only on the TV
+  target_link_options(sdl-test PRIVATE -Wl,-rpath-link,${USERLAND_PREFIX}/lib -Wl,--disable-new-dtags)
+  target_link_libraries(sdl-test SDL2)
+  set_target_properties(sdl-test PROPERTIES INSTALL_RPATH "$ORIGIN/lib")
+  install(TARGETS sdl-test DESTINATION nc4-homebrew/sdl-test)
+  # the stick is FAT: install the library itself under its SONAME, not the symlink
+  get_filename_component(SDL2_LIBRARY_FILE ${SDL2_PREFIX}/lib/libSDL2-2.0.so.0 REALPATH)
+  install(FILES ${SDL2_LIBRARY_FILE} DESTINATION nc4-homebrew/sdl-test/lib RENAME libSDL2-2.0.so.0)
+endif()
+
 # Everything goes to nc4-homebrew/ at the root of a USB stick. On the TV,
 # "nc4-homebrew/nc4app setup" registers it as the "NC4 Homebrew" system app
 # (nc4-launcher, which starts the program in autostart) and

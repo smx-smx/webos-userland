@@ -111,7 +111,12 @@ static const char *device_name(LGNC_INPUT_DEV_TYPE_T type)
     case LGNC_INPUT_TYPE_HIDPAD: return "hidpad";
     case LGNC_INPUT_TYPE_WIDI: return "widi";
     case LGNC_INPUT_TYPE_PS3: return "ps3";
-    default: return "?";
+    default: {
+        /* called from the input thread and the render loop */
+        static __thread char buf[16];
+        snprintf(buf, sizeof(buf), "type%d", (int) type);
+        return buf;
+    }
     }
 }
 

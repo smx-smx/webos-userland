@@ -16,6 +16,7 @@
 
 #include <lgnc.h>
 #include <lgnc_dl.h>
+#include <lgnc_stdio.h>
 
 #include "nc4log.h"
 
@@ -79,7 +80,11 @@ int main(int argc, char **argv)
     signal(SIGINT, onSignal);
     signal(SIGTERM, onSignal);
 
-    if (!LGNC_DL_HOA_Initialize()) {
+    int fds[2];
+    lgnc_stdio_save(fds);
+    int loaded = LGNC_DL_HOA_Initialize();
+    lgnc_stdio_restore(fds);
+    if (!loaded) {
         nc4log("LGNC_DL_HOA_Initialize failed");
         return 1;
     }

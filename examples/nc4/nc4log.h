@@ -1,8 +1,7 @@
 /*
- * procmgr LD_PRELOADs liblibm.so, which hooks printf/puts/fwrite and friends
- * and swallows their output. Log with write(2) instead, to stderr and to
- * <program>.log next to the executable (the app manager starts apps with
- * an arbitrary working directory).
+ * Log to stderr and to <program>.log next to the executable (the app manager
+ * starts apps with an arbitrary working directory). The examples keep stderr
+ * working with lgnc_stdio.h, see there for why printf & co. stop working.
  */
 #pragma once
 

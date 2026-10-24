@@ -15,6 +15,7 @@
 #include <GLES2/gl2.h>
 
 #include <lgnc.h>
+#include <lgnc_stdio.h>
 
 #include "nc4log.h"
 
@@ -90,7 +91,10 @@ int main(int argc, char **argv)
         .mouseEventCallback = mouseEventCallback,
         .joystickEventCallback = NULL,
     };
+    int fds[2];
+    lgnc_stdio_save(fds);
     int ret = LGNC_SYSTEM_Initialize(argc, argv, &callbacks);
+    lgnc_stdio_restore(fds);
     nc4log("LGNC_SYSTEM_Initialize: %d (auid 0x%llx)", ret, LGNC_SYSTEM_GetAUID());
     if (ret != LGNC_OK)
         return 1;

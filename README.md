@@ -1,6 +1,6 @@
-# webos-userland
+# lg-userland
 
-Stub libraries and headers for common propriertary LG WebOS libraries
+Stub libraries and headers for common proprietary LG webOS and NetCast libraries
 
 ## NetCast 4
 

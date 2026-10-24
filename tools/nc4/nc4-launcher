@@ -1,0 +1,65 @@
+#!/bin/sh
+# Launcher of the "NC4 Homebrew" system app, installed by "nc4app setup".
+#
+# procmgr starts it from <usb>/nc4-homebrew (through the
+# /mnt/system_app/preloadedapps/apps/nc4homebrew symlink) as
+#
+#   nc4-launcher [<ExecuteAppEx param>] --service <name> --auid <hex>
+#
+# Everything before "--service" selects the program to run, the rest is passed
+# on unchanged so LGNC_SYSTEM_Initialize() registers with the app manager:
+#
+# - started from My Apps: no program is given, the first line of
+#   nc4-homebrew/autostart is used (e.g. "lgnc-gles --seconds 60")
+# - started with "nc4app run <program> [args]": the program comes from the
+#   ExecuteAppEx parameter
+#
+# Programs are looked up in nc4-homebrew/ unless given as absolute paths.
+# The process is replaced with exec, so procmgr/appctrl track the program itself.
+
+home=$(cd "$(dirname "$0")" && pwd -P)
+log=$home/nc4-launcher.log
+
+prog=
+args=
+while [ $# -gt 0 ] && [ "$1" != "--service" ]; do
+    if [ -z "$prog" ]; then
+        prog=$1
+    else
+        args="$args $1"
+    fi
+    shift
+done
+
+if [ -z "$prog" ] && [ -f "$home/autostart" ]; then
+    # shellcheck disable=SC2046 # split the autostart line into words
+    set -- $(head -n 1 "$home/autostart") "$@"
+    prog=$1
+    shift
+    while [ $# -gt 0 ] && [ "$1" != "--service" ]; do
+        args="$args $1"
+        shift
+    done
+fi
+
+{
+    echo "$(date) pid $$: $prog$args $*"
+} >> "$log"
+
+case "$prog" in
+"")
+    echo "  nothing to run, create $home/autostart" >> "$log"
+    exit 1
+    ;;
+/*) ;;
+*) prog=$home/$prog ;;
+esac
+
+if [ ! -x "$prog" ]; then
+    echo "  $prog is not executable" >> "$log"
+    exit 1
+fi
+
+cd "$(dirname "$prog")" || exit 1
+# shellcheck disable=SC2086 # args are split on purpose
+exec "$prog" $args "$@"

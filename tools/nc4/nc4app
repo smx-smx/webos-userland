@@ -1,0 +1,294 @@
+#!/bin/sh
+# Run homebrew on NetCast 4 through the stock app manager (appctrl), so programs
+# are started exactly like apps from My Apps: procmgr passes
+# "--service <name> --auid <hex>", appctrl gives them focus, switches the OSD
+# and returns to the previous app when they exit.
+#
+# USB developer apps (lgapps/installed) need NCG-encrypted manifests, system
+# apps don't: "setup" registers <usb>/nc4-homebrew as the system app
+# "NC4 Homebrew" by symlinking it into /mnt/system_app/preloadedapps/apps and
+# bind-mounting extended copies of /mnt/addon/contents/systemapps*.xml. The
+# mounts are gone after a reboot (run setup again), firmware files are untouched.
+#
+# usage: nc4app setup                  register "NC4 Homebrew" (shows up in My Apps)
+#        nc4app teardown               undo setup
+#        nc4app status
+#        nc4app run <program> [args]   start nc4-homebrew/<program> as "NC4 Homebrew"
+#                                      and wait for it to exit
+#        nc4app launch <auid> [args]   start any app, args are appended to its command line
+#        nc4app exit <auid> [code]     ask appctrl to close an app (code 1 = back to the
+#                                      previous app, 3 = Home, 0 = no focus)
+#        nc4app wait <auid>            wait until the app's process is gone
+#        nc4app focused                AUID of the focused app
+#        nc4app list                   USB developer apps (lgapps/installed)
+#        nc4app reload                 rescan USB developer apps (like re-plugging the stick)
+#        nc4app usbdev                 HOA USB device number of the stick
+#        nc4app manifest <path>        print a (possibly NCG-encrypted) manifest
+
+export LD_LIBRARY_PATH=/usr/local/lib:/mnt/lg/res/lglib:$LD_LIBRARY_PATH
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    # the session bus of the app framework, as seen by procmgr's children
+    DBUS_SESSION_BUS_ADDRESS=$(tr '\0' '\n' < /proc/$(pidof appctrl)/environ | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
+    export DBUS_SESSION_BUS_ADDRESS
+fi
+
+CALLER=lg.service.normal.nc4app
+APP_ALIAS=nc4homebrew
+APP_ID=${NC4APP_ID:-79999}
+APP_NAME="NC4 Homebrew"
+SYSTEM_APPS=/mnt/system_app/preloadedapps/apps
+CONTENTS=/mnt/addon/contents
+STATE=/tmp/nc4app
+# HOST_EVT_USB_APPSTORE_CHANGED, broadcast by upctrl when the active USB stick changes
+HOST_EVT_USB_APPSTORE_CHANGED=61519
+
+call() {
+    dest=$1 path=$2 method=$3
+    shift 3
+    dbus-send --session --print-reply --reply-timeout=20000 --dest="$dest" "$path" "lg.if.service.$method" "$@"
+}
+
+# print the value of the first reply argument
+reply_value() {
+    sed -n '2{s/^ *[a-z0-9]* //;s/^"//;s/"$//;p}'
+}
+
+# directory of this script, i.e. <usb>/nc4-homebrew
+home() {
+    cd "$(dirname "$0")" && pwd -P
+}
+
+usb_root() {
+    for d in /mnt/usb/usb*/Drive*; do
+        [ -d "$d/lgapps/installed" ] && { echo "$d"; return 0; }
+    done
+    return 1
+}
+
+# HOA_IO device number whose drive is mounted at $1 (what upctrl calls gActiveDeviceNum)
+usb_devnum() {
+    target=$1
+    dev=0
+    while [ $dev -lt 16 ]; do
+        report=$(call lg.service.special.broadcast /hoa/tv HOA_IO_GetUSBDeviceReport uint32:$dev 2>/dev/null)
+        if echo "$report" | grep -q 'boolean true'; then
+            hex=$(echo "$report" | reply_value)
+            # byte 0: number of drives, followed by 8-bit drive IDs
+            n=$((0x$(echo "$hex" | cut -c1-2)))
+            i=0
+            while [ $i -lt $n ]; do
+                drive=$((0x$(echo "$hex" | cut -c$((3 + i * 2))-$((4 + i * 2)))))
+                drv=$(call lg.service.special.broadcast /hoa/tv HOA_IO_GetUSBDriveReport uint32:$drive 2>/dev/null | reply_value)
+                # mount path is a NUL-terminated string at offset 4
+                path=$(printf '%b' "$(echo "$drv" | cut -c9-520 | sed 's/../\\x&/g')" | tr '\0' '\n' | head -n 1)
+                [ "$path" = "$target" ] && { echo $dev; return 0; }
+                i=$((i + 1))
+            done
+        fi
+        dev=$((dev + 1))
+    done
+    return 1
+}
+
+manifest() {
+    printf '%b' "$(call lg.service.special.upctrl /hoa/uc AC_SEND_GetManifestBufferFromFile string:"$1" |
+        sed -n '/array of bytes/,/]/p' | sed '1d;$d' | tr -s ' \n' ' ' | sed 's/ *\([0-9a-f][0-9a-f]\)/\\x\1/g')"
+}
+
+tag() {
+    sed -n "s:.*<$1>\(.*\)</$1>.*:\1:p" | head -n 1
+}
+
+# PID of the process procmgr started for an AUID
+app_pid() {
+    hex=$(printf %x "$1")
+    ps | grep -- "--auid $hex\\( \\|\$\\)" | grep -v grep | awk '{print $1}' | head -n 1
+}
+
+wait_gone() {
+    i=0
+    while [ -n "$(app_pid "$1")" ]; do
+        [ $i -ge "$2" ] && return 1
+        sleep 1
+        i=$((i + 1))
+    done
+    return 0
+}
+
+# our bind mount is in place over $1 (/proc/mounts can't tell: on this kernel a
+# file bind-mounted over the addon unionfs shows up under a different name)
+is_mounted() {
+    grep -q "alias=\"$APP_ALIAS\"" "$1"
+}
+
+app_name() {
+    call lg.service.special.appctrl /hoa/app HOA_APP_GetAppInfo uint64:"$1" 2>/dev/null | sed -n '5{s/^ *string "//;s/"$//;p}'
+}
+
+refresh_system_apps() {
+    dbus-send --session --type=method_call --dest=lg.service.special.appctrl /hoa/uc \
+        lg.if.service.AC_SEND_RequestSystemAppsUpdate
+    sleep 3
+}
+
+setup() {
+    h=$(home)
+    [ -x "$h/nc4-launcher" ] || { echo "$h/nc4-launcher is missing" >&2; return 1; }
+    if grep -q "app_id=\"$APP_ID\"" "$CONTENTS/systemapps.xml" && ! is_mounted "$CONTENTS/systemapps.xml"; then
+        echo "app_id $APP_ID is taken by a stock system app, set NC4APP_ID" >&2
+        return 1
+    fi
+
+    cat > "$h/manifest.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app_content>
+    <is_system_app>Y</is_system_app>
+    <app_id>$APP_ID</app_id>
+    <app_ver>1.0</app_ver>
+    <app_type>8</app_type>
+    <file_size>0</file_size>
+    <file_name>nc4-launcher</file_name>
+    <exec_arg></exec_arg>
+    <icon_xsmall>icon.png</icon_xsmall>
+    <icon_small>icon.png</icon_small>
+    <icon_medium>icon.png</icon_medium>
+    <icon_xlarge>icon.png</icon_xlarge>
+    <alias>$APP_ALIAS</alias>
+    <title lang="00">
+      <app_name>$APP_NAME</app_name>
+      <description>Homebrew from $h</description>
+    </title>
+    <in_backlist>Y</in_backlist>
+    <capability>
+      <resolution>1280,720</resolution>
+    </capability>
+</app_content>
+EOF
+    ln -sfn "$h" "$SYSTEM_APPS/$APP_ALIAS"
+
+    mkdir -p "$STATE"
+    if ! is_mounted "$CONTENTS/systemapps.xml"; then
+        sed "s|</xml>|\t<app alias=\"$APP_ALIAS\" app_id=\"$APP_ID\"></app>\n</xml>|" \
+            "$CONTENTS/systemapps.xml" > "$STATE/systemapps.xml"
+        mount --bind "$STATE/systemapps.xml" "$CONTENTS/systemapps.xml" || return 1
+    fi
+    if ! is_mounted "$CONTENTS/systemapps_launcher.xml"; then
+        # visible in My Apps for every country group
+        sed "s|</country>|\t<app alias=\"$APP_ALIAS\" app_id=\"$APP_ID\" show_in_myapps=\"yes\" show_default=\"yes\">\n\t</app>\n</country>|" \
+            "$CONTENTS/systemapps_launcher.xml" > "$STATE/systemapps_launcher.xml"
+        mount --bind "$STATE/systemapps_launcher.xml" "$CONTENTS/systemapps_launcher.xml" || return 1
+    fi
+
+    refresh_system_apps
+    name=$(app_name "$APP_ID")
+    if [ "$name" != "$APP_NAME" ]; then
+        echo "appctrl did not pick up the app (got '$name')" >&2
+        return 1
+    fi
+    echo "\"$APP_NAME\" registered as AUID $APP_ID (0x$(printf %x $APP_ID)), runs $h/nc4-launcher"
+}
+
+teardown() {
+    [ -n "$(app_pid "$APP_ID")" ] && "$0" exit "$APP_ID"
+    is_mounted "$CONTENTS/systemapps_launcher.xml" && umount "$CONTENTS/systemapps_launcher.xml"
+    is_mounted "$CONTENTS/systemapps.xml" && umount "$CONTENTS/systemapps.xml"
+    [ -L "$SYSTEM_APPS/$APP_ALIAS" ] && rm "$SYSTEM_APPS/$APP_ALIAS"
+    refresh_system_apps
+    echo "\"$APP_NAME\" removed"
+}
+
+case "$1" in
+setup)
+    setup
+    ;;
+teardown)
+    teardown
+    ;;
+status)
+    echo "app:      $(app_name "$APP_ID") (AUID $APP_ID)"
+    echo "symlink:  $(readlink "$SYSTEM_APPS/$APP_ALIAS")"
+    is_mounted "$CONTENTS/systemapps.xml" && echo "mounted:  systemapps.xml"
+    is_mounted "$CONTENTS/systemapps_launcher.xml" && echo "mounted:  systemapps_launcher.xml"
+    pid=$(app_pid "$APP_ID")
+    echo "running:  ${pid:-no}"
+    echo "focused:  $("$0" focused)"
+    ;;
+run)
+    [ -n "$2" ] || { echo "usage: $0 run <program> [args]" >&2; exit 1; }
+    shift
+    [ "$(app_name "$APP_ID")" = "$APP_NAME" ] || setup || exit 1
+    if [ -n "$(app_pid "$APP_ID")" ]; then
+        echo "\"$APP_NAME\" is already running, closing it first"
+        "$0" exit "$APP_ID"
+    fi
+    "$0" launch "$APP_ID" "$@" || exit 1
+    sleep 2
+    pid=$(app_pid "$APP_ID")
+    [ -n "$pid" ] || { echo "not running, see $(home)/nc4-launcher.log" >&2; exit 1; }
+    echo "running as pid $pid, waiting for it to exit (Ctrl-C leaves it running)"
+    wait_gone "$APP_ID" 100000
+    echo "exited, focused app: $("$0" focused)"
+    ;;
+launch)
+    [ -n "$2" ] || { echo "usage: $0 launch <auid> [args]" >&2; exit 1; }
+    auid=$2
+    shift 2
+    if [ $# -gt 0 ]; then
+        ret=$(call lg.service.special.appctrl /hoa/app HOA_APP_ExecuteAppEx string:$CALLER uint64:$auid \
+            string:"$*" uint32:0 uint32:0 | reply_value)
+    else
+        ret=$(call lg.service.special.appctrl /hoa/app HOA_APP_ExecuteApp string:$CALLER uint64:$auid \
+            uint32:0 uint32:0 | reply_value)
+    fi
+    echo "HOA_APP_ExecuteApp(0x$(printf %x $auid)): ${ret:-no reply}"
+    [ "$ret" = 0 ]
+    ;;
+exit)
+    [ -n "$2" ] || { echo "usage: $0 exit <auid> [code]" >&2; exit 1; }
+    ret=$(call lg.service.special.appctrl /hoa/app HOA_APP_ExitApp uint64:$2 uint32:${3:-1} | reply_value)
+    echo "HOA_APP_ExitApp(0x$(printf %x $2), ${3:-1}): ${ret:-no reply}"
+    # apps are told to terminate, but not all of them do
+    if ! wait_gone "$2" 10; then
+        pid=$(app_pid "$2")
+        echo "pid $pid still running, sending SIGTERM"
+        kill -TERM "$pid" 2>/dev/null
+        wait_gone "$2" 5 || { echo "sending SIGKILL"; kill -KILL "$(app_pid "$2")" 2>/dev/null; }
+    fi
+    [ "$ret" = 0 ]
+    ;;
+wait)
+    [ -n "$2" ] || { echo "usage: $0 wait <auid>" >&2; exit 1; }
+    wait_gone "$2" 100000
+    ;;
+focused)
+    auid=$(call lg.service.special.appctrl /hoa/app HOA_APP_GetFocusedAuid | reply_value)
+    printf '%s (0x%x)\n' "$auid" "$auid"
+    ;;
+list)
+    root=$(usb_root) || { echo "no USB stick with lgapps/installed" >&2; exit 1; }
+    for d in "$root"/lgapps/installed/*/; do
+        id=$(basename "$d")
+        m=$(manifest "$d/manifest.xml" 2>/dev/null)
+        printf '%-8s 0x%-6x type=%-2s %-30s %s\n' "$id" "$id" "$(echo "$m" | tag app_type)" \
+            "$(echo "$m" | tag file_name)" "$(echo "$m" | tag app_name)"
+    done
+    ;;
+usbdev)
+    root=$(usb_root) || { echo "no USB stick with lgapps/installed" >&2; exit 1; }
+    usb_devnum "$root"
+    ;;
+reload)
+    root=$(usb_root) || { echo "no USB stick with lgapps/installed" >&2; exit 1; }
+    dev=$(usb_devnum "$root") || { echo "can't find the HOA USB device of $root" >&2; exit 1; }
+    echo "USB device $dev ($root)"
+    dbus-send --session --type=signal /hoa/proc lg.if.service.HOA_PROC_SendEventToProcess \
+        uint32:$HOST_EVT_USB_APPSTORE_CHANGED uint32:$dev
+    ;;
+manifest)
+    manifest "$2"
+    ;;
+*)
+    sed -n '2,/^$/s/^# \{0,1\}//p' "$0"
+    exit 1
+    ;;
+esac

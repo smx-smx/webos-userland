@@ -25,6 +25,8 @@
 #        nc4app usbdev                 HOA USB device number of the stick
 #        nc4app manifest <path>        print a (possibly NCG-encrypted) manifest
 
+# dbus-send is in /usr/local/bin, which isn't in the PATH of e.g. dropbear sessions
+export PATH=/usr/local/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/lib:/mnt/lg/res/lglib:$LD_LIBRARY_PATH
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     # the session bus of the app framework, as seen by procmgr's children

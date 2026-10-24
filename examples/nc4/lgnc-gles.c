@@ -1,8 +1,8 @@
 /*
  * Full NetCast 4 application: registers with the app manager, creates an
  * EGL window surface on the LGNC display and animates a GLES2 clear color
- * plus a scissored square. Logs key events and exits on BACK, on
- * LGNC_MSG_TERMINATE or after --seconds N (default 15).
+ * plus a scissored square. Logs key events and exits on BACK, when it loses
+ * the focus, on LGNC_MSG_TERMINATE or after --seconds N (default 15).
  *
  * argv must contain "--auid <hex>"; the app manager passes it.
  */
@@ -27,7 +27,8 @@ static LGNC_STATUS_T msgHandler(LGNC_MSG_TYPE_T msg, unsigned int submsg, char *
 {
     (void) pData;
     nc4log("msgHandler: msg=%d submsg=%u size=%u", msg, submsg, dataSize);
-    if (msg == LGNC_MSG_TERMINATE)
+    /* the app manager closes apps (HOA_APP_ExitApp, Home/Exit keys) by taking the focus away */
+    if (msg == LGNC_MSG_TERMINATE || msg == LGNC_MSG_FOCUS_OUT)
         running = 0;
     return LGNC_HANDLED;
 }
@@ -71,9 +72,14 @@ int main(int argc, char **argv)
             seconds = atoi(argv[i + 1]);
     }
 
-    nc4log_open("lgnc-gles.log");
+    nc4log_open(argv[0]);
     for (int i = 0; i < argc; i++)
         nc4log("argv[%d] = %s", i, argv[i]);
+    char cwd[256];
+    nc4log("cwd = %s", getcwd(cwd, sizeof(cwd)) ? cwd : "?");
+    static const char *const envVars[] = {"LD_PRELOAD", "LD_LIBRARY_PATH", "PWD", "HOME"};
+    for (unsigned int i = 0; i < sizeof(envVars) / sizeof(envVars[0]); i++)
+        nc4log("%s = %s", envVars[i], getenv(envVars[i]) ? getenv(envVars[i]) : "(unset)");
 
     signal(SIGINT, onSignal);
     signal(SIGTERM, onSignal);

@@ -1,20 +1,27 @@
 /*
  * procmgr LD_PRELOADs liblibm.so, which hooks printf/puts/fwrite and friends
  * and swallows their output. Log with write(2) instead, to stderr and to
- * <program>.log in the current directory.
+ * <program>.log next to the executable (the app manager starts apps with
+ * an arbitrary working directory).
  */
 #pragma once
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 static int nc4log_fd = -1;
 
-static inline void nc4log_open(const char *path)
+static inline void nc4log_open(const char *argv0)
 {
+    char exe[PATH_MAX], path[PATH_MAX + 8];
+    if (realpath(argv0, exe) == NULL)
+        return;
+    snprintf(path, sizeof(path), "%s.log", exe);
     nc4log_fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 

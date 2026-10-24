@@ -75,7 +75,7 @@ int main(int argc, char **argv)
             freq = atof(argv[i + 1]);
     }
 
-    nc4log_open("lgnc-tone.log");
+    nc4log_open(argv[0]);
     signal(SIGINT, onSignal);
     signal(SIGTERM, onSignal);
 

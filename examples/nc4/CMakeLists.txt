@@ -4,7 +4,8 @@
 #         -DCMAKE_INSTALL_PREFIX=$PWD/build/nc4-install
 #   cmake --build build/nc4 && cmake --install build/nc4
 #   cmake -S examples/nc4 -B build/nc4-examples -DCMAKE_TOOLCHAIN_FILE=... \
-#         -DUSERLAND_PREFIX=$PWD/build/nc4-install
+#         -DUSERLAND_PREFIX=$PWD/build/nc4-install -DCMAKE_INSTALL_PREFIX=<USB stick root>
+#   cmake --build build/nc4-examples && cmake --install build/nc4-examples
 cmake_minimum_required(VERSION 3.12)
 project(nc4_examples LANGUAGES C)
 
@@ -27,5 +28,12 @@ target_link_libraries(lgnc-gles lgncopenapi EGL GLESv2 dl pthread)
 add_executable(lgnc-tone lgnc-tone.c)
 target_link_libraries(lgnc-tone lgncopenapi m dl pthread)
 
-install(TARGETS lgnc-info lgnc-gles lgnc-tone DESTINATION .)
-install(PROGRAMS run.sh DESTINATION .)
+# Everything goes to nc4-homebrew/ at the root of a USB stick. On the TV,
+# "nc4-homebrew/nc4app setup" registers it as the "NC4 Homebrew" system app
+# (nc4-launcher, which starts the program in autostart) and
+# "nc4app run <program> [args]" starts programs through the app manager.
+# run.sh starts them from a shell instead, without app manager integration.
+set(TOOLS_DIR ${CMAKE_SOURCE_DIR}/../../tools/nc4)
+install(TARGETS lgnc-info lgnc-gles lgnc-tone DESTINATION nc4-homebrew)
+install(PROGRAMS run.sh ${TOOLS_DIR}/nc4app ${TOOLS_DIR}/nc4-launcher DESTINATION nc4-homebrew)
+install(FILES icon.png autostart DESTINATION nc4-homebrew)

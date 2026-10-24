@@ -9,11 +9,12 @@
 
 #include "nc4log.h"
 
-int main(void)
+int main(int argc, char **argv)
 {
     int ret;
 
-    nc4log_open("lgnc-info.log");
+    (void) argc;
+    nc4log_open(argv[0]);
 
     if (!LGNC_DL_HOA_Initialize()) {
         nc4log("LGNC_DL_HOA_Initialize failed");

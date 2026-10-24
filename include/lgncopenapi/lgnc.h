@@ -15,5 +15,5 @@
 #include "lgnc_egl.h"
 #include "lgnc_dl.h"
 #include "lgnc_gamepad.h"
-#include "lgnc_directvideo.h"
+#include "lgnc_directaudio.h"
 #include "lgnc_directvideo.h"

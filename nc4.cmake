@@ -35,5 +35,5 @@ endforeach()
 install(FILES ${CMAKE_BINARY_DIR}/include/lgncopenapi/lgnc_config.h DESTINATION include/lgncopenapi)
 
 install(FILES share/pkgconfig/egl.pc share/pkgconfig/glesv1_cm.pc share/pkgconfig/glesv2.pc
-              share/pkgconfig/lgncopenapi.pc
+              share/pkgconfig/nc4/lgncopenapi.pc
         DESTINATION share/pkgconfig)

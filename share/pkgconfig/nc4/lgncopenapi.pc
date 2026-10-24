@@ -1,0 +1,12 @@
+prefix=/usr
+exec_prefix=/usr
+datarootdir=${prefix}/share
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/lgncopenapi
+
+Name: lgncopenapi
+Description: NetCast 4 Native Development Kit (LGNC Open API)
+Version: 2.1.2
+# liblgncopenapi.so.2 uses dlopen() and pthreads without linking libdl/libpthread
+Libs: -L${libdir} -llgncopenapi -ldl -lpthread
+Cflags: -I${includedir} -DLGNC_PLATFORM_NC4=1

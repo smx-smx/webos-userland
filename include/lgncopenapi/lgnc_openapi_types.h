@@ -6,6 +6,8 @@ extern "C" {
 
 #include <linux/input.h>
 
+#include "lgnc_config.h"
+
 typedef enum LGNC_STATUS_T {
     LGNC_OK = 0,
     LGNC_HANDLED = 0,

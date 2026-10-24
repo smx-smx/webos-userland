@@ -17,3 +17,5 @@
 #include "lgnc_gamepad.h"
 #include "lgnc_directaudio.h"
 #include "lgnc_directvideo.h"
+#include "lgnc_media.h"
+#include "lgnc_log.h"

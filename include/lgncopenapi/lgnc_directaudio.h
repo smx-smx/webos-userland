@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "lgnc_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -156,6 +158,30 @@ int LGNC_DIRECTAUDIO_Open(LGNC_ADEC_DATA_INFO_T *info);
  * @return 0 if succeeded
  */
 int LGNC_DIRECTAUDIO_Play(const void *data, unsigned int size);
+
+#if LGNC_PLATFORM_NC4
+int LGNC_DIRECTAUDIO_Pause(void);
+
+int LGNC_DIRECTAUDIO_Resume(void);
+
+/**
+ * @brief Open the secondary (mixed) audio channel
+ * @note NetCast 4 only
+ */
+int LGNC_DIRECTAUDIO_OpenSub(LGNC_ADEC_DATA_INFO_T *info);
+
+/**
+ * @brief Feed PCM data to the secondary audio channel
+ * @note NetCast 4 only
+ */
+int LGNC_DIRECTAUDIO_PlaySub(const void *data, unsigned int size);
+
+/**
+ * @brief Close the secondary audio channel
+ * @note NetCast 4 only
+ */
+int LGNC_DIRECTAUDIO_CloseSub(void);
+#endif
 
 #ifdef __cplusplus
 }

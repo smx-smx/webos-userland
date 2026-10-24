@@ -18,6 +18,13 @@ extern "C" {
  */
 int LGNC_PLUGIN_Initialize(LGNC_CALLBACKS_T *callbacks);
 
+#if LGNC_PLATFORM_NC4
+/**
+ * @brief Set the area of the screen used by the plugin
+ * @note NetCast 4 only; LGNC_PLUGIN_Initialize() sets 0, 0, 1280, 720
+ */
+int LGNC_PLUGIN_SetDisplayArea(int x, int y, int w, int h);
+#else
 /**
  * @brief Set application ID
  *
@@ -28,6 +35,7 @@ int LGNC_PLUGIN_Initialize(LGNC_CALLBACKS_T *callbacks);
  *
  */
 int LGNC_PLUGIN_SetAppId(const char *appId);
+#endif
 
 int LGNC_PLUGIN_Finalize();
 

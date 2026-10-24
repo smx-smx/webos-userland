@@ -6,6 +6,14 @@ extern "C" {
 
 #include <EGL/egl.h>
 
+#include "lgnc_config.h"
+
+/*
+ * NetCast 4 has no LGNC_egl* wrappers: use plain EGL with the window ID
+ * returned by LGNC_SYSTEM_GetDisplayId() as EGLNativeWindowType.
+ */
+#if !LGNC_PLATFORM_NC4
+
 EGLDisplay LGNC_eglGetDisplay();
 EGLBoolean LGNC_eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor);
 EGLBoolean LGNC_eglTerminate(EGLDisplay dpy);
@@ -25,6 +33,8 @@ EGLBoolean LGNC_eglDestroyContext(EGLDisplay dpy, EGLContext ctx);
 EGLBoolean LGNC_eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
 
 EGLBoolean LGNC_eglSwapBuffers(EGLDisplay dpy, EGLSurface draw);
+
+#endif
 
 #ifdef __cplusplus
 }

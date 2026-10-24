@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "lgnc_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,6 +88,14 @@ int LGNC_DIRECTVIDEO_Open(const LGNC_VDEC_DATA_INFO_T *info);
  */
 int LGNC_DIRECTVIDEO_Play(const void *data, unsigned int size);
 
+#if LGNC_PLATFORM_NC4
+/**
+ * @brief Check whether the direct video decoder has been opened
+ * @return non-zero if opened
+ * @note NetCast 4 only
+ */
+int LGNC_DIRECTVIDEO_CheckIsInitialized(void);
+#else
 /**
  * @brief Set video display window on the screen
  * @param x X position of the video
@@ -106,6 +116,7 @@ int _LGNC_DIRECTVIDEO_SetDisplayWindow(int x, int y, int w, int h);
  * @since webOS 1.4.0
  */
 int _LGNC_DIRECTVIDEO_SetCustomDisplayWindow(int x, int y, int w, int h);
+#endif
 
 #ifdef __cplusplus
 }

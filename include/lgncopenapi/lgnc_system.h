@@ -111,6 +111,16 @@ typedef struct LGNC_CUSTOM_CURSOR {
     unsigned short gapY;
 } LGNC_CUSTOM_CURSOR_T;
 
+/**
+ * @brief Initialize the application
+ *
+ * On NC4 this registers the process with the TV application manager.
+ * argv must contain "--auid <hex>" (the app manager passes it), otherwise
+ * LGNC_INVALID_PARAMS is returned. callbacks->msgHandler must not be NULL.
+ *
+ * The window ID for eglCreateWindowSurface() can then be obtained
+ * with LGNC_SYSTEM_GetDisplayId().
+ */
 int LGNC_SYSTEM_Initialize(int argc, char **argv, LGNC_CALLBACKS_T *callbacks);
 
 int LGNC_SYSTEM_Finalize(void);
@@ -119,17 +129,75 @@ int LGNC_SYSTEM_GetDisplayId(int *displayId /* very likely to be wl_egl_window *
 
 int LGNC_SYSTEM_GetDisplayResolution(int *width, int *height);
 
+/**
+ * @brief Get the UI language
+ * @param language buffer of at least 4 bytes, receives a NUL-terminated 3-character language code on NC4
+ */
 int LGNC_SYSTEM_GetLanguage(char *language);
 
+/**
+ * @brief Get the per-application writable directory
+ * @param directory buffer of at least 4097 bytes
+ */
 int LGNC_SYSTEM_GetSaveDirectory(char *directory);
 
 int LGNC_SYSTEM_GetSystemInfo(LGNC_CTRL_INFO *info);
 
 int LGNC_SYSTEM_GetVersion(int *major, int *minor, int *patch);
 
+#if LGNC_PLATFORM_NC4
+/**
+ * @brief Select the cursor shape of the application window
+ *
+ * Use one of LGNC_CURSOR_TYPE_CUSTOM_A..E to show a cursor registered with
+ * LGNC_SYSTEM_SetCustomCursor().
+ */
+int LGNC_SYSTEM_SetCursorShape(LGNC_CURSOR_TYPE_T type, LGNC_CURSOR_SIZE_T size, LGNC_CURSOR_STATE_T state);
+
+/**
+ * @brief Register custom cursor images
+ * @param cursors Array of cursors; fileInfo is the path to a PNG image
+ * @param count Number of elements in cursors
+ */
+int LGNC_SYSTEM_SetCustomCursor(LGNC_CUSTOM_CURSOR_T *cursors, unsigned int count);
+
+/**
+ * @brief Deprecated on NC4, always returns LGNC_OK. Use a transparent custom cursor instead.
+ */
+int LGNC_SYSTEM_ShowCursor(int show);
+
+int LGNC_SYSTEM_GetCursorPosition(int *x, int *y);
+
+int LGNC_SYSTEM_SetCursorPosition(int x, int y);
+
+/**
+ * @brief Set the resolution of the application window (EGL surface)
+ *
+ * Must be between 640x360 and 1280x720.
+ */
+int LGNC_SYSTEM_SetResolution(unsigned int width, unsigned int height);
+
+/**
+ * @brief Block audio and/or video output of the TV
+ */
+int LGNC_SYSTEM_SetAVBlock(int blockAudio, int blockVideo);
+
+int LGNC_SYSTEM_ResetDisplayArea(void);
+
+/**
+ * @brief Clear LGLaunchImage.png, shown by LGNC_SYSTEM_Initialize() from the app directory
+ */
+int LGNC_SYSTEM_RemoveLaunchImage(void);
+
+/**
+ * @brief Application unique ID, passed as "--auid <hex>" on the command line
+ */
+unsigned long long LGNC_SYSTEM_GetAUID(void);
+#else
 int LGNC_SYSTEM_SetCursorShape(void);
 
 int LGNC_SYSTEM_SetCustomCursor(void);
+#endif
 
 #ifdef __cplusplus
 }

@@ -5,6 +5,18 @@ set(CMAKE_C_STANDARD 11)
 
 include_directories(include)
 
+# webos: webOS TVs (default)
+# nc4:   NetCast 4.x TVs (2013-2014, MT5398 etc.); only libraries and symbols that exist there
+set(WEBOS_USERLAND_PLATFORM "webos" CACHE STRING "Target platform (webos or nc4)")
+set_property(CACHE WEBOS_USERLAND_PLATFORM PROPERTY STRINGS webos nc4)
+
+if (WEBOS_USERLAND_PLATFORM STREQUAL "nc4")
+  include(nc4.cmake)
+  return()
+elseif (NOT WEBOS_USERLAND_PLATFORM STREQUAL "webos")
+  message(FATAL_ERROR "Unknown WEBOS_USERLAND_PLATFORM: ${WEBOS_USERLAND_PLATFORM}")
+endif()
+
 add_library(EGL SHARED src/dummy.c)
 set_target_properties(EGL PROPERTIES VERSION 1.4.0 SOVERSION 1)
 target_link_options(EGL PRIVATE ${CMAKE_SOURCE_DIR}/src/EGL.lds)

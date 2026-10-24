@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "webos",
+      "displayName": "webOS",
+      "description": "Stub libraries for webOS TVs",
+      "binaryDir": "${sourceDir}/build/webos",
+      "cacheVariables": { "WEBOS_USERLAND_PLATFORM": "webos" }
+    },
+    {
+      "name": "nc4",
+      "displayName": "NetCast 4",
+      "description": "Stub libraries for NetCast 4.x TVs; only APIs that exist on NC4. Pass -DCMAKE_TOOLCHAIN_FILE=<sdk>/share/buildroot/toolchainfile.cmake",
+      "binaryDir": "${sourceDir}/build/nc4",
+      "cacheVariables": { "WEBOS_USERLAND_PLATFORM": "nc4" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "webos", "configurePreset": "webos" },
+    { "name": "nc4", "configurePreset": "nc4" }
+  ]
+}

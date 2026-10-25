@@ -142,9 +142,37 @@ appctrl's environment), with `dbus-send` available on the TV:
 | downloaded | `/mnt/appstore/apps/installed/<app_id>/` | NCG-encrypted only |
 | USB developer apps | `<usb>/lgapps/installed/<app_id>/`, rescanned on `HOST_EVT_USB_APPSTORE_CHANGED` (61519, param = HOA USB device number) | NCG-encrypted only: upctrl returns an error for plaintext manifests |
 
-The AUID is the `app_id`. Manifest `app_type` 7, 8 and 9 are native programs
-(4 too); `file_name` is relative to the app directory unless it starts with
-`/mnt/`, `exec_arg` adds arguments.
+The AUID is the `app_id`.
+
+### App types
+
+appctrl/upctrl map the manifest's numeric `app_type` to an internal type
+(`_AM_CMN_APPLIST_*_GetAppType`), the same way for system, premium and
+downloaded apps, and pick the launcher from it
+(`AM_CMN_APPLIST_UTIL_GetExecuteInfo`):
+
+| `app_type` | Internal | Old string name | Launched as |
+| --- | --- | --- | --- |
+| 1 | `0x30000` | `swf` | Flash app in Adobe AIR for TV (`/mnt/addon/airfortv/bin/airfortv -app_id ... -bgalpha 0 ...`) |
+| 2 | `0x40000` | `browser` | web app in the browser (`/mnt/browser/run3556`, `/mnt/webbrowser/run_webbrowser`) |
+| 3 | `0x50000` | `plex` | airfortv running `/mnt/addon/contents/system/plex/exec_plex.swf` |
+| 4 | `0x80000` | | native program, like 7-9 |
+| 5 | `0x90000` | | Adobe AIR app (airfortv `--airbase`, `META-INF/AIR/application.xml`) |
+| 6 | `0x60000` | | TrickPlay app (`/mnt/addon/trickplay/bin/trickplay.sh ... --profile extendedTV`) |
+| 7, 8, 9 | `0x70000` | `native` | native program |
+| 10 | `0x10000` | `dtv` | the TV UI (`/mnt/lg/lgapp/RELEASE`) |
+| 11 | `0x20000` | `fxui` | LG's SWF UI player (`/usr/local/bin/fxui <file>.swf`): Home, My Apps... |
+
+Other values are unknown types and don't launch. The top byte of the internal
+type is the app list: `0x02` premium, `0x03`-`0x05` downloaded (by storage).
+
+Native programs run `file_name`, relative to the app directory unless it starts
+with `/mnt/`, followed by `exec_arg`. 7, 8 and 9 are handled identically. 4
+only differs in the "run single" flag, which downloaded and premium apps get
+for types 2 and 7-9 (system apps unless their arguments contain `-multi`).
+procmgr only uses it for runtimes it knows (one shared service name, or
+`.multi.<letter>` instances): any other binary runs as
+`lg.service.normal.default.<letter>` and draws in `HOA_GX_WINDOW_DEFAULT`.
 
 ### Homebrew without NCG
 

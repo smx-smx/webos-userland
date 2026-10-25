@@ -174,6 +174,24 @@ procmgr only uses it for runtimes it knows (one shared service name, or
 `.multi.<letter>` instances): any other binary runs as
 `lg.service.normal.default.<letter>` and draws in `HOA_GX_WINDOW_DEFAULT`.
 
+### Graphics
+
+procmgr is also the window manager. Every app draws in one of 79 predefined
+`HOA_GX_WINDOW_*` windows (`procmgr` D-Bus name
+`lg.service.special.processmanagergx`, `/hoa/proc`, on the **system** bus).
+It merges the visible windows into `HOA_GX_WINDOW_MERGE`: the window with the
+lowest Z-order is copied, every window above it is blended *source over* with
+its per-pixel alpha, and the result is shown on an OSD plane that the hardware
+blends over the video plane, again with the alpha. Started from My Apps, the
+My Apps window stays visible below the app.
+
+So pixels with alpha below 1 show My Apps or the TV picture. There is no
+per-window opacity or blending switch (`HOA_GX_SetWindowProperty` covers size,
+visibility, stereoscopic mode and vsync), and every window-capable EGL config
+is ARGB8888. Apps that want to be opaque have to write alpha 1: SDL's nc4 video
+driver does that before each buffer swap, unless the app sets
+`SDL_HINT_VIDEO_EGL_ALLOW_TRANSPARENCY` to overlay the TV picture.
+
 ### Homebrew without NCG
 
 `tools/nc4/nc4app` (installed to `nc4-homebrew/` by `examples/nc4`) registers
